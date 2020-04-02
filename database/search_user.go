@@ -176,6 +176,12 @@ func	Search_return_card(account string) []models.Return_card{
 	return return_card
 }
 
+func	Search_return_card_id(id int) models.Return_card{
+	var return_card models.Return_card
+	connect.Db.Where("card_id = ? ",id).Find(&return_card)
+	return return_card
+}
+
 func	Search_collect_byids(account string,card_id int) models.Collect_record{
 	var collect models.Collect_record
 	err := connect.Db.Where("user_account = ? and card_id = ?",account,card_id).Find(&collect).Error

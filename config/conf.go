@@ -38,3 +38,26 @@ func init() {
 		log.Fatalf("解析配置文件失败:", err)
 	}
 }
+//本地
+/*func Conf(conf string) string {
+	if conf == "ip"{
+		return "http://192.168.16.126:8080"
+	}
+	if conf == "server"{
+		return "192.168.16.126:8080"
+	}else{
+		return "err"
+	}
+}*/
+
+//服务器
+func Conf(conf string) string {
+	if conf == "ip"{
+		return "https://card.itianwang.com"
+	}
+	if conf == "server"{
+		return "127.0.0.1:8080"
+	}else{
+		return "err"
+	}
+}

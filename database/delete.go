@@ -37,3 +37,10 @@ func	Delete_uploadFile(file []string) {
 		log.Println(err)
 	}
 }
+
+func	Delete_return_card(account string,cardid int) error {
+	return_card := models.Return_card{}
+	err := connect.Db.Where("accept_account = ? and card_id = ?",account,cardid).Delete(&return_card).Error
+	return err
+}
+

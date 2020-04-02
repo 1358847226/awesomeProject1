@@ -43,7 +43,7 @@
     <property name="com.intellij.ide.scratch.LRUPopupBuilder$1/!action.NewScratchFile.text.with.new!" value="yaml" />
     <property name="go.import.settings.migrated" value="true" />
     <property name="go.tried.to.enable.integration.vgo.integrator" value="true" />
-    <property name="last_opened_file_path" value="$PROJECT_DIR$/config" />
+    <property name="last_opened_file_path" value="$PROJECT_DIR$/../wechat-master" />
     <property name="nodejs_package_manager_path" value="npm" />
   </component>
   <component name="RecentsManager">

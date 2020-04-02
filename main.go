@@ -10,6 +10,7 @@ import (
 	"github.com/gin-gonic/gin"
 	_ "github.com/gin-gonic/gin"
 	"net/http"
+	"awesomeProject1/config"
 )
 
 func main(){
@@ -50,6 +51,7 @@ func main(){
 		}
 
 	r.StaticFS("/upload", http.Dir("./upload"))
+	r.StaticFS("/.well-known", http.Dir("./.well-known"))
 	r.GET("/user/:name", user.UserInfo)
 	r.POST("/login", user.Login)//后台登录接口
 	r.POST("/Userregister",user.Userregister)//第一次授权注册
@@ -86,13 +88,14 @@ func main(){
 	r.POST("/Code",user.Code)//生成二维码
 	r.POST("/Regular",user.Regular)//正则表达式测试
 	r.POST("/Search_share_bycardid",user.Search_share_bycardid)//根据名片id查询分享记录
-	r.POST("/SubscribeMessage",user.SubscribeMessage)
-
+	r.POST("/SubscribeMessage",user.SubscribeMessage)//回传名片
+	r.POST("/Return_collect",user.Return_collect)//收藏回传名片
+	r.POST("/Shuixianhua",user.Shuixianhua)
 
 	r.POST("/Updatapassword",user.Updatapassword)//修改管理员密码
 	r.POST("/Search_notes",user.Search_notes)//查询搜索记录
-	//r.Run("192.168.16.126:8080") // 监听并在 0.0.0.0:8080 上启动服务
-	r.Run("172.17.205.23:8080")//在服务器上运行
+	r.Run(config.Conf("server")) // 监听并在 0.0.0.0:8080 上启动服务
+	//r.Run("172.17.205.23:8080")//在服务器上运行
 
 
 

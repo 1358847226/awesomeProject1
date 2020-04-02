@@ -2,6 +2,7 @@ package controller
 
 import (
 	"awesomeProject1/api"
+	"awesomeProject1/config"
 	"awesomeProject1/database"
 	"awesomeProject1/middleware"
 	"awesomeProject1/models"
@@ -25,7 +26,6 @@ type User struct {
 }
 
 var Res string
-
 func (*User) UserInfo(ctx *gin.Context) {
 	name := ctx.Param("name")
 	list := database.Search_browse_byname(name)
@@ -38,7 +38,7 @@ func (*User) UserInfo(ctx *gin.Context) {
 func (*User) Userregister(ctx *gin.Context) {
 	code := ctx.Query("code")
 	client := &http.Client{Timeout: 5 * time.Second}
-	resp, _ := client.Get("https://api.weixin.qq.com/sns/jscode2session?appid=wxdf131fbe9fc9887f&secret=659e5540cf1c36bdadd5f2e08fd877eb&js_code=" + code + "&grant_type=authorization_code")
+	resp, _ := client.Get("https://api.weixin.qq.com/sns/jscode2session?appid=wxf835047e3970b804&secret=cc3b3e36d7475099bc452be494208095&js_code=" + code + "&grant_type=authorization_code")
 	defer resp.Body.Close()
 	var buffer [512]byte
 	result := bytes.NewBuffer(nil)
@@ -60,7 +60,7 @@ func (*User) Userregister(ctx *gin.Context) {
 	res := resultData[d+11 : k-1]
 	fmt.Println("请求结果", resultData)
 
-	resp2,_ := client.Get("https://api.weixin.qq.com/cgi-bin/token?grant_type=client_credential&appid=wxdf131fbe9fc9887f&secret=659e5540cf1c36bdadd5f2e08fd877eb",)
+	resp2,_ := client.Get("https://api.weixin.qq.com/cgi-bin/token?grant_type=client_credential&appid=wxf835047e3970b804&secret=cc3b3e36d7475099bc452be494208095",)
 	defer resp2.Body.Close()
 	var buffer2 [512]byte
 	result2 := bytes.NewBuffer(nil)
@@ -124,7 +124,7 @@ func (*User) Login(ctx *gin.Context) {
 		}
 
 		client := &http.Client{Timeout: 5 * time.Second}
-		resp, _ := client.Get("https://api.weixin.qq.com/cgi-bin/token?appid=wxdf131fbe9fc9887f&secret=659e5540cf1c36bdadd5f2e08fd877eb&grant_type=client_credential")
+		resp, _ := client.Get("https://api.weixin.qq.com/cgi-bin/token?appid=wxf835047e3970b804&secret=cc3b3e36d7475099bc452be494208095&grant_type=client_credential")
 		defer resp.Body.Close()
 		var buffer [512]byte
 		result := bytes.NewBuffer(nil)
@@ -290,32 +290,52 @@ func (*User) Createcard(ctx *gin.Context) {
 		if form.FormInfo.Mark == true{
 			database.Updata_card_mark(form.UserAccount)
 		}
-		var err = database.Createcard(data)
-		if err.Error != nil {
-			ctx.JSON(200, gin.H{
-				"message": "创建失败",
-				"err":     err,
-				"data":    data,
-			})
-		} else {
-			log.Println("789")
-			database.Updata_user(form.UserAccount,user.Card_quantity+1)
-			log.Println("789")
-			card_id = int(database.Search_card_last(form.UserAccount).Card_id)
-			log.Println("头像",form.FormInfo.Avatar)
-			avatar := Download(form.FormInfo.Avatar , card_id)
-			database.Updata_card_avatar(card_id,avatar)
-			log.Println(user.Card_quantity)
-			if user.Card_quantity == 0{
-				database.Updata_user_name(form.UserAccount,form.FormInfo.UserName,avatar)
-			}
-			card := strconv.Itoa(card_id)
-			log.Println("fsfsfsfsf",card)
-			ctx.JSON(200, gin.H{
-				"message": "创建成功",
-				"cardid":card,
-			})
+		content := form.FormInfo.Post + form.FormInfo.UserName + form.FormInfo.Introduction + form.FormInfo.CompanyAddress
+		token := api.GetAccessToken()
+		res := api.MsgSecCheck(token , content)
+
+		type MeadiaResult struct {
+			Errcode int `json:"errcode"`
+			Errmsg string `json:"errmsg"`
 		}
+		var meadiaResult MeadiaResult
+		if err := json.Unmarshal([]byte(res), &meadiaResult); err == nil {
+			if meadiaResult.Errcode == 0{
+				var err = database.Createcard(data)
+				if err.Error != nil {
+					ctx.JSON(200, gin.H{
+						"message": "创建失败",
+						"err":     err,
+						"data":    data,
+					})
+				} else {
+					log.Println("789")
+					database.Updata_user(form.UserAccount,user.Card_quantity+1)
+					log.Println("789")
+					card_id = int(database.Search_card_last(form.UserAccount).Card_id)
+					log.Println("头像",form.FormInfo.Avatar)
+					avatar := Download(form.FormInfo.Avatar , card_id)
+					database.Updata_card_avatar(card_id,avatar)
+					log.Println(user.Card_quantity)
+					if user.Card_quantity == 0{
+						database.Updata_user_name(form.UserAccount,form.FormInfo.UserName,avatar)
+					}
+					card := strconv.Itoa(card_id)
+					log.Println("fsfsfsfsf",card)
+					ctx.JSON(200, gin.H{
+						"message": "创建成功",
+						"cardid":card,
+					})
+				}
+			}else{
+
+				ctx.JSON(200, gin.H{
+					"err": meadiaResult,
+				})
+			}
+		}
+
+
 	}else{
 		ctx.JSON(200, gin.H{
 			"message": "名片数已达上限",
@@ -540,6 +560,7 @@ func (*User) Createcollect(ctx *gin.Context) {
 			})
 		} else {
 			database.Collect_add(collect.Card_id)
+			database.Delete_return_card(collect.Account, collect.Card_id)
 			ctx.JSON(200, gin.H{
 				"message": "收藏成功",
 			})
@@ -552,6 +573,7 @@ func (*User) Createcollect(ctx *gin.Context) {
 			})
 		} else {
 			database.Collect_add(collect.Card_id)
+			database.Delete_return_card(collect.Account, collect.Card_id)
 			ctx.JSON(200, gin.H{
 				"message": "收藏成功",
 			})
@@ -948,60 +970,80 @@ func (*User) Deletecard_bycardid(ctx *gin.Context) {
 }
 
 func Download(url string, card_id int) string {
-	imgPath := "/upload/avatar/"+strconv.Itoa(card_id)+".jpg"
+	time := time.Now().Format("20060102150405")
+	imgPath := "/upload/avatar/" + time + strconv.Itoa(card_id)+".jpg"
 	resp, _ := http.Get(url)
 	body, _ := ioutil.ReadAll(resp.Body)
 	out, _ := os.Create("."+imgPath)
 	io.Copy(out, bytes.NewReader(body))
-	return "http://192.168.16.126:8080"+imgPath
+	return config.Conf("ip")+imgPath
 }
 
 func (*User) Upload(ctx *gin.Context) {
-	/*cardid := ctx.Query("card_id")
-	card_id, _ := strconv.Atoi(cardid)
-	form, _ := ctx.MultipartForm()
-	files := form.File["upload[]"]
+	file, err := ctx.FormFile("file")
+	num := ctx.PostForm("num")
 
-	for _, file := range files {
-		log.Println(file.Filename)
+	log.Println("num",num)
+	number,_ := strconv.Atoi(num)
+
+
+		filename := file.Filename
+
+		s := strings.LastIndex(filename, ".")
+
+		fname := filename[s:]
 		n := rand.Intn(999)
 		k := strconv.Itoa(n)
-		name := k+file.Filename
-		// 上传文件到指定的路径
-		os.Mkdir("./upload/"+cardid+"/",os.ModePerm)
-		//os.Create(cardid)
-		ctx.SaveUploadedFile(file, "./upload/"+cardid+"/"+name)
+		time := time.Now().Unix()
+		name := strconv.Itoa(int(time))
+		url := config.Conf("ip") + "/upload/" + k + name + fname
+		//url := "http://192.168.16.126:8080/upload/"+k+name+fname
+		log.Println(url)
+		error := ctx.SaveUploadedFile(file, "./upload/"+k+name+fname)
+		if err != nil {
+			ctx.JSON(200, gin.H{
+				"err": error,
+			})
+		} else {
+			token := api.GetAccessToken()
+			log.Println(number)
+			var res string
+			if number == 2{
+				res = api.MediaCheckAsync(token, url)
+			}
+			if number == 1{
+				res = api.ImgSecCheck(token, file)
+			}
 
-		v := database.Search_card_byid(card_id)
-		v.Card_video = v.Card_video + "," + name
-		data := models.Card_warehouse{
-			Card_video:        v.Card_video,
+			type MeadiaResult struct {
+				Errcode int `json:"errcode"`
+				Errmsg string `json:"errmsg"`
+				Trace_id string `json:"trace_id"`
+			}
+			var meadiaResult MeadiaResult
+			if err := json.Unmarshal([]byte(res), &meadiaResult); err == nil {
+				if meadiaResult.Errcode == 0{
+					ctx.JSON(200, gin.H{
+						"res": res,
+						"url": url,
+						"err": error,
+					})
+				}else{
+					var u []string
+					u[0] = url
+					database.Delete_uploadFile(u)
+					ctx.JSON(200, gin.H{
+						"err": meadiaResult,
+					})
+				}
+			}
+
 		}
-		database.Updata_card(card_id,data)
-	}
-	ctx.String(http.StatusOK, fmt.Sprintf("%d files uploaded!", len(files)))*/
-	file, err := ctx.FormFile("file")
-	filename := file.Filename
-	s := strings.LastIndex(filename,".")
-	fname := filename[s:]
-	n := rand.Intn(999)
-	k := strconv.Itoa(n)
-	time := time.Now().Unix()
-	name := strconv.Itoa(int(time))
-	url := "http://192.168.16.126:8080/upload/"+k+name+fname
-	log.Println(url)
-	error := ctx.SaveUploadedFile(file,"./upload/"+k+name+fname)
-	if err != nil{
-		ctx.JSON(200, gin.H{
-			"err":error,
-		})
-	}else {
-		ctx.JSON(200, gin.H{
-			"url": url,
-			"err":error,
-		})
-	}
+
+
 }
+
+
 
 func (*User) Deletevideo(ctx *gin.Context) {
 	cardid := ctx.Query("card_id")
@@ -1496,12 +1538,14 @@ func (*User) Search_collect_byaccount(ctx *gin.Context) {
 	return_card := database.Search_return_card(collect.Account)
 	for j := 0; j < len(return_card); j++{
 		card := database.Search_card_byid(return_card[j].CardId)
+
 		returnCard[j] = models.Return_card2{
 			Card_id:     return_card[j].CardId,
 			Return_date: return_card[j].Date.Format("2006-01-02 15:04:05"),
 			Username:    card.Card_user_name,
-			Card:        models.Card_warehouse{},
+			Card:        card,
 		}
+		log.Println(returnCard[j])
 	}
 	ctx.JSON(200, gin.H{
 		"collect":collect_card[:len(res)],
@@ -1532,7 +1576,7 @@ func (*User) Code(ctx *gin.Context) {
 	var addr Url
 	ctx.BindJSON(&addr)
 	client := &http.Client{Timeout: 5 * time.Second}
-	resp2,_ := client.Get("https://api.weixin.qq.com/cgi-bin/token?grant_type=client_credential&appid=wxdf131fbe9fc9887f&secret=659e5540cf1c36bdadd5f2e08fd877eb",)
+	resp2,_ := client.Get("https://api.weixin.qq.com/cgi-bin/token?grant_type=client_credential&appid=wxf835047e3970b804&secret=cc3b3e36d7475099bc452be494208095",)
 	defer resp2.Body.Close()
 	var buffer2 [512]byte
 	result2 := bytes.NewBuffer(nil)
@@ -1664,6 +1708,55 @@ func (*User) SubscribeMessage(ctx *gin.Context) {
 	log.Println("错误",err)
 	ctx.JSON(200, gin.H{
 		"err":err,
+	})
+}
+
+func (*User) Return_collect(ctx *gin.Context) {
+	type Return_collect struct {
+		Visit_account string `json:"visit_account"`
+		Collect_mark bool `json:"collect_mark"`
+		Card_id int `json:"card_id"`
+		Visit_name string `json:"visit_name"`
+	}
+	var return_collect Return_collect
+	ctx.BindJSON(&return_collect)
+	collect := models.Collect_record{
+		User_account: return_collect.Visit_account,
+		User_name:    return_collect.Visit_name,
+		Card_id:      return_collect.Card_id,
+		Collect_mark: true,
+		Collect_date: time.Now(),
+	}
+	if return_collect.Collect_mark == true{
+		database.Createcollect(collect)
+	}
+	err := database.Delete_return_card(return_collect.Visit_account, return_collect.Card_id)
+	ctx.JSON(200, gin.H{
+		"err":err,
+	})
+}
+
+func (*User) Shuixianhua(ctx *gin.Context) {
+	var Res int
+	for i := 100; i < 1000 ; i++{
+		Res = 0
+		one := strconv.Itoa(i)
+		for j := 0 ; j < len(one) ; j++{
+			num,_ := strconv.Atoi(string(one[j]))
+			Res = Res + num * num * num
+			if j == len(one) - 1{
+
+				if i == Res{
+					log.Println(len(one))
+					log.Println(i)
+				}
+			}
+		}
+	}
+	ip := config.Conf("ip")
+	ctx.JSON(200, gin.H{
+		"ip" : ip,
+		"err":Res,
 	})
 }
 

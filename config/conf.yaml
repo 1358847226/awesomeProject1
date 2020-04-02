@@ -13,3 +13,8 @@ conenction:
   username : root
   password : 123456
 
+server:
+  ip : http://192.168.16.126:8080
+
+/*server:
+  ip : https://card.itianwang.com*/

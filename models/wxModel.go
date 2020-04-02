@@ -6,7 +6,7 @@ type Value struct {
 
 type Data struct {
 	Thing1 Value `json:"thing1"`
-	Time2 Value `json:"time2"`
+	Time3 Value `json:"time3"`
 }
 
 type SubscribeMessage struct {
